@@ -1,0 +1,96 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/jinwoll/minixia-cli/internal/api"
+	"github.com/jinwoll/minixia-cli/internal/config"
+	"github.com/spf13/cobra"
+)
+
+// 构建时通过 ldflags 注入
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
+// 全局 flag 值，在 PersistentPreRun 中解析为 resolvedCfg
+var (
+	flagApikey  string
+	flagRole    string
+	flagBaseURL string
+	flagProfile string
+	flagVerbose bool
+	flagDebug   bool
+
+	resolvedCfg *config.ResolvedConfig
+	apiClient   *api.Client
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "minixia",
+	Short: "迷你虾 CLI — 跨平台命令行工具",
+	Long: `🦐 迷你虾 CLI (minixia)
+
+一行命令即可安装的跨平台工具，封装迷你虾全部 HTTP API：
+  · 发送消息（文本/图片/语音/语音通话）
+  · 轮询与确认指令
+  · Webhook / MQTT 集成
+  · 配置持久化与多 profile 管理
+
+快速开始: minixia init`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// init / config create / version / help 等命令不需要解析配置
+		if skipConfigResolve(cmd) {
+			return nil
+		}
+		cfg, err := config.Resolve(config.ResolveOptions{
+			FlagApikey:  flagApikey,
+			FlagRole:    flagRole,
+			FlagBaseURL: flagBaseURL,
+			FlagProfile: flagProfile,
+		})
+		if err != nil {
+			return err
+		}
+		resolvedCfg = cfg
+		apiClient = api.NewClient(cfg.BaseURL)
+		return nil
+	},
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func init() {
+	// 注册全局持久化 flags
+	pf := rootCmd.PersistentFlags()
+	pf.StringVarP(&flagApikey, "apikey", "k", "", "API 密钥")
+	pf.StringVarP(&flagRole, "role", "r", "", "角色名称")
+	pf.StringVar(&flagBaseURL, "base-url", "", "服务器地址")
+	pf.StringVar(&flagProfile, "profile", "", "使用指定 profile")
+	pf.BoolVar(&flagVerbose, "verbose", false, "输出详细日志")
+	pf.BoolVar(&flagDebug, "debug", false, "输出调试信息")
+}
+
+// skipConfigResolve 判断当前命令是否无需加载 profile 配置
+func skipConfigResolve(cmd *cobra.Command) bool {
+	name := cmd.Name()
+	switch name {
+	case "init", "version", "help", "completion", "uninstall":
+		return true
+	}
+	// config create / config delete 等子命令也跳过
+	if cmd.Parent() != nil && cmd.Parent().Name() == "config" {
+		return true
+	}
+	return false
+}
