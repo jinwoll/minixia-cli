@@ -116,7 +116,7 @@ goreleaser release --snapshot --clean
 4. 在终端设置环境变量后执行正式发行（**不要用** `--snapshot`）：
 
    ```sh
-   export GITHUB_TOKEN=ghp_xxxx   # Windows PowerShell: $env:GITHUB_TOKEN="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"  $env:GITEA_TOKEN="834dc945f1b5e0b08be8471c87238c5d"
+   export GITHUB_TOKEN=ghp_xxxx   # Windows PowerShell: $env:GITHUB_TOKEN="ghp_..."
    goreleaser release --clean
    ```
 
