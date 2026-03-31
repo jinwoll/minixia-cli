@@ -1,6 +1,6 @@
 # 迷你虾 CLI（minixia）
 
-跨平台的 **[迷你虾](https://github.com/mini-claw)** 命令行工具：发送消息、拉取/确认指令、Webhook 与 MQTT 集成，以及配置与多环境（profile）管理。
+跨平台的 **[迷你虾](https://minixia.app)** 命令行工具：发送消息、拉取/确认指令、Webhook 与 MQTT 集成，以及配置与多环境（profile）管理。
 
 本仓库：**[github.com/jinwoll/minixia-cli](https://github.com/jinwoll/minixia-cli)**  
 模块路径：`github.com/jinwoll/minixia-cli`  
