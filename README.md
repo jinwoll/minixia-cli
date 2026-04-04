@@ -65,7 +65,7 @@ Windows：`go build -o minixia.exe .`
 带版本信息：
 
 ```sh
-VERSION=0.1.0
+VERSION=0.1.2
 COMMIT=$(git rev-parse --short HEAD)
 DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
@@ -86,8 +86,19 @@ go build -o minixia \
 
 ```sh
 cd minixia-cli
+
+**PowerShell：**
+$env:GORELEASER_CURRENT_TAG = "v0.1.2"
 goreleaser release --snapshot --clean
+
+**Bash：**
+export GORELEASER_CURRENT_TAG=v0.1.2
+goreleaser release --snapshot --clean
+
 ```
+
+
+
 
 完成后 **`dist/`** 目录中会包含：
 
