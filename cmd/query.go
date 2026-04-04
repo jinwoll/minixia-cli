@@ -22,6 +22,7 @@ var (
 	queryAutoAck  bool
 	queryExec     string
 	queryOutput   string
+	queryRole     string
 )
 
 var queryCmd = &cobra.Command{
@@ -31,6 +32,7 @@ var queryCmd = &cobra.Command{
 
 示例：
   minixia query
+  minixia query -r worker
   minixia query --watch --interval 5
   minixia query --watch --auto-ack --exec 'echo "$CONTENT"'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -48,16 +50,18 @@ var queryCmd = &cobra.Command{
 func init() {
 	queryCmd.Flags().IntVarP(&queryLimit, "limit", "n", 20, "单次拉取条数")
 	queryCmd.Flags().BoolVarP(&queryWatch, "watch", "w", false, "持续轮询模式")
-	queryCmd.Flags().IntVarP(&queryInterval, "interval", "i", 5, "轮询间隔（秒）")
-	queryCmd.Flags().BoolVar(&queryAutoAck, "auto-ack", false, "拉取后自动确认")
-	queryCmd.Flags().StringVarP(&queryExec, "exec", "e", "", "对每条指令执行的 shell 命令（可用 $CONTENT, $TYPE, $CMD_ID）")
+	queryCmd.Flags().IntVarP(&queryInterval, "interval", "i", 30, "轮询间隔（秒）")
+	queryCmd.Flags().BoolVar(&queryAutoAck, "auto-ack", true, "拉取后自动确认")
+	queryCmd.Flags().StringVarP(&queryExec, "exec", "e", "$CONTENT", "对每条指令执行的 shell 命令（可用 $CONTENT, $TYPE, $CMD_ID）")
 	queryCmd.Flags().StringVarP(&queryOutput, "output", "o", "table", "输出格式：table / json / raw")
+	queryCmd.Flags().StringVarP(&queryRole, "role", "r", "", "角色（未指定时同 minixia -r / profile 解析结果）")
 	rootCmd.AddCommand(queryCmd)
 }
 
 // runSingleQuery 单次拉取并展示
 func runSingleQuery() error {
-	resp, err := apiClient.Query(resolvedCfg.Apikey, resolvedCfg.Role, "", queryLimit)
+	role := effectiveRole(queryRole)
+	resp, err := apiClient.Query(resolvedCfg.Apikey, role, "", queryLimit)
 	if err != nil {
 		output.HandleError(err)
 		return nil
@@ -75,7 +79,7 @@ func runSingleQuery() error {
 	}
 
 	if queryAutoAck && len(cmdIDs) > 0 {
-		if _, err := apiClient.Ack(resolvedCfg.Apikey, resolvedCfg.Role, cmdIDs); err != nil {
+		if _, err := apiClient.Ack(resolvedCfg.Apikey, role, cmdIDs); err != nil {
 			output.PrintError(fmt.Sprintf("自动确认失败: %v", err))
 		} else {
 			output.PrintSuccess(fmt.Sprintf("已自动确认 %d 条指令", len(cmdIDs)))
@@ -98,6 +102,7 @@ func runWatchMode() error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	cursor := ""
+	role := effectiveRole(queryRole)
 	for {
 		select {
 		case <-sigCh:
@@ -107,7 +112,7 @@ func runWatchMode() error {
 		default:
 		}
 
-		resp, err := apiClient.Query(resolvedCfg.Apikey, resolvedCfg.Role, cursor, queryLimit)
+		resp, err := apiClient.Query(resolvedCfg.Apikey, role, cursor, queryLimit)
 		if err != nil {
 			output.PrintError(fmt.Sprintf("拉取失败: %v", err))
 			time.Sleep(time.Duration(queryInterval) * time.Second)
@@ -131,7 +136,7 @@ func runWatchMode() error {
 			}
 
 			if queryAutoAck && len(cmdIDs) > 0 {
-				if _, err := apiClient.Ack(resolvedCfg.Apikey, resolvedCfg.Role, cmdIDs); err != nil {
+				if _, err := apiClient.Ack(resolvedCfg.Apikey, role, cmdIDs); err != nil {
 					output.PrintError(fmt.Sprintf("自动确认失败: %v", err))
 				}
 			}

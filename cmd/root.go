@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/jinwoll/minixia-cli/internal/api"
 	"github.com/jinwoll/minixia-cli/internal/config"
@@ -36,8 +37,7 @@ var rootCmd = &cobra.Command{
 
 一行命令即可安装的跨平台工具，封装迷你虾全部 HTTP API：
   · 发送消息（文本/图片/语音/语音通话）
-  · 轮询与确认指令
-  · Webhook / MQTT 集成
+  · WebSocket 实时接收指令与轮询拉取
   · 配置持久化与多 profile 管理
 
 快速开始: minixia init`,
@@ -93,4 +93,15 @@ func skipConfigResolve(cmd *cobra.Command) bool {
 		return true
 	}
 	return false
+}
+
+// effectiveRole 子命令本地 -r 优先，否则使用 PersistentPreRun 解析后的 resolvedCfg.Role
+func effectiveRole(localOverride string) string {
+	if s := strings.TrimSpace(localOverride); s != "" {
+		return s
+	}
+	if resolvedCfg == nil {
+		return ""
+	}
+	return resolvedCfg.Role
 }

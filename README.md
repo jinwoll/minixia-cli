@@ -1,6 +1,6 @@
 # 迷你虾 CLI（minixia）
 
-跨平台的 **[迷你虾](https://minixia.app)** 命令行工具：发送消息、拉取/确认指令、Webhook 与 MQTT 集成，以及配置与多环境（profile）管理。
+跨平台的 **[迷你虾](https://minixia.app)** 命令行工具：发送消息、**WebSocket 实时收指令**、轮询拉取/确认指令，以及配置与多环境（profile）管理。
 
 本仓库：**[github.com/jinwoll/minixia-cli](https://github.com/jinwoll/minixia-cli)**  
 模块路径：`github.com/jinwoll/minixia-cli`  
@@ -187,9 +187,8 @@ gh release create v0.1.0 dist/checksums.sha256 dist/minixia-* --repo jinwoll/min
 | `minixia init` | 交互式创建默认 profile |
 | `minixia send` | 发送消息 |
 | `minixia query` | 轮询拉取指令 |
+| `minixia ws` | WebSocket 实时接收指令 |
 | `minixia ack` | 确认指令 |
-| `minixia webhook` | Webhook 管理 |
-| `minixia mqtt` | MQTT 订阅指令 |
 | `minixia status` | 服务健康检查 |
 | `minixia config` | profile 管理 |
 | `minixia upgrade` | 从 **GitHub Releases** 检查并替换当前二进制（`--check` 仅检查） |
@@ -203,8 +202,8 @@ minixia send "纯文本"
 minixia send --type image ./screenshot.png
 echo "管道" | minixia send -
 minixia query --watch --interval 5
-minixia webhook --url https://example.com/hook
-minixia mqtt --broker tcp://127.0.0.1:1883
+minixia ws
+minixia ws --exec 'echo "$CONTENT"'
 ```
 
 更多见 `minixia <cmd> -h`。

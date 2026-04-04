@@ -37,7 +37,7 @@ type AckResponse struct {
 	Acked int `json:"acked"`
 }
 
-// Query 调用 GET /v1/query/:apikey 拉取指令
+// Query 调用 GET /api/query/:apikey 拉取指令
 func (c *Client) Query(apikey, role, cursor string, limit int) (*QueryResponse, error) {
 	params := url.Values{}
 	if role != "" {
@@ -50,7 +50,7 @@ func (c *Client) Query(apikey, role, cursor string, limit int) (*QueryResponse, 
 		params.Set("limit", strconv.Itoa(limit))
 	}
 
-	path := fmt.Sprintf("/v1/query/%s?%s", url.PathEscape(apikey), params.Encode())
+	path := fmt.Sprintf("/api/query/%s?%s", url.PathEscape(apikey), params.Encode())
 	resp, err := c.Get(path)
 	if err != nil {
 		return nil, err
@@ -63,14 +63,14 @@ func (c *Client) Query(apikey, role, cursor string, limit int) (*QueryResponse, 
 	return &result, nil
 }
 
-// Ack 调用 POST /v1/query/ack 确认指令已处理
+// Ack 调用 POST /api/query/ack 确认指令已处理
 func (c *Client) Ack(apikey, role string, cmdIDs []string) (*AckResponse, error) {
 	req := &AckRequest{
 		Apikey:       apikey,
 		Role:         role,
 		ClientCmdIDs: cmdIDs,
 	}
-	resp, err := c.Post("/v1/query/ack", req)
+	resp, err := c.Post("/api/query/ack", req)
 	if err != nil {
 		return nil, err
 	}

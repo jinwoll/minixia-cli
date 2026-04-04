@@ -2,7 +2,7 @@ package api
 
 import "encoding/json"
 
-// SendRequest 发送消息的请求体，对应 POST /v1/send
+// SendRequest 发送消息的请求体，对应 POST /api/send
 type SendRequest struct {
 	Apikey    string `json:"apikey"`
 	Role      string `json:"role"`
@@ -20,9 +20,9 @@ type SendResponse struct {
 	Status    string `json:"status"` // ok / duplicate / error
 }
 
-// Send 调用 POST /v1/send 发送消息
+// Send 调用 POST /api/send 发送消息
 func (c *Client) Send(req *SendRequest) (*SendResponse, error) {
-	resp, err := c.Post("/v1/send", req)
+	resp, err := c.Post("/api/send", req)
 	if err != nil {
 		return nil, err
 	}

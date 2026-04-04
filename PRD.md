@@ -20,7 +20,7 @@
 ## 1. 产品目标
 
 1. 提供 **一行命令即可安装** 的体验（`curl ... | sh`），覆盖 Windows（WSL / Git Bash / PowerShell）、macOS、Ubuntu/Debian。
-2. 封装迷你虾全部 HTTP API，让用户无需手写 curl 即可完成：发送消息、轮询指令、Webhook 配置、MQTT 订阅。
+2. 封装迷你虾全部 HTTP API 与 CLI WebSocket，让用户无需手写 curl 即可完成：发送消息、**`minixia ws` 实时收指令**、**`minixia query` 轮询**与确认。
 3. 支持 **配置持久化**，一次 `minixia init` 后，后续命令无需重复输入 apikey。
 4. 提供丰富的快捷用法与管道支持，便于集成进 CI/CD、cron、脚本。
 
@@ -338,61 +338,27 @@ minixia ack <cmd_id_1> <cmd_id_2> <cmd_id_3>
 minixia ack --all
 ```
 
-### 4.3 Webhook 配置：`minixia webhook`
+### 4.3 WebSocket 收指令：`minixia ws`
 
 ```bash
-minixia webhook [OPTIONS]
+minixia ws [OPTIONS]
 ```
+
+连接服务端 **`CLI_WS_PATH`**（默认 `/api/cli/ws`），Query 携带当前 profile 的 **apikey**、**role**。下行消息为 JSON：`{ "type":"command", "data": { ... } }`（字段同 `query` 返回的单条指令）。默认在处理后通过 **`POST /api/query/ack`** 自动确认；可用 `--auto-ack=false` 改为手动 `minixia ack`。
 
 **选项：**
 
 | 选项 | 短写 | 说明 |
 |------|------|------|
-| `--apikey` | `-k` | API 密钥 |
-| `--role` | `-r` | 角色名称 |
-| `--url` | `-u` | Webhook 回调地址（HTTPS） |
-| `--remove` | | 移除已配置的 Webhook |
-| `--test` | | 发送测试回调验证连通性 |
+| `--exec` | `-e` | 对每条指令执行的 shell（`$CONTENT` / `$TYPE` / `$CMD_ID`） |
+| `--auto-ack` | | 默认 `true`；为 `false` 时不自动 HTTP 确认 |
 
 ```bash
-# 设置 Webhook
-minixia webhook --url https://my-server.com/webhook
-
-# 测试 Webhook
-minixia webhook --test
-
-# 移除 Webhook
-minixia webhook --remove
+minixia ws
+minixia ws --exec './handle.sh "$CONTENT"'
 ```
 
-### 4.4 MQTT 连接：`minixia mqtt`
-
-```bash
-minixia mqtt [OPTIONS]
-```
-
-**选项：**
-
-| 选项 | 短写 | 说明 |
-|------|------|------|
-| `--apikey` | `-k` | API 密钥 |
-| `--role` | `-r` | 角色名称 |
-| `--broker` | `-b` | MQTT Broker 地址 |
-| `--username` | | MQTT 用户名 |
-| `--password` | | MQTT 密码 |
-| `--exec` | `-e` | 对每条指令执行的 shell 命令 |
-
-```bash
-# 连接并订阅指令
-minixia mqtt --broker mqtt://broker.minixia.app:1883
-
-# 连接并自动处理
-minixia mqtt --broker mqtt://broker.minixia.app:1883 --exec './handle.sh "$CONTENT"'
-```
-
-运行后 CLI 将作为前台进程持续运行，订阅 `cmd/{apikey}/{role}` topic，收到消息后输出到 stdout 或执行 `--exec` 指定的命令。
-
-### 4.5 健康检查：`minixia status`
+### 4.4 健康检查：`minixia status`
 
 ```bash
 minixia status
@@ -411,7 +377,7 @@ minixia status
   角色  ：bot
 ```
 
-### 4.6 帮助与版本
+### 4.5 帮助与版本
 
 ```bash
 minixia --help              # 全局帮助
@@ -452,7 +418,7 @@ minixia --version           # 版本号
 | 配置目录 | `~/.minixia/` | `%LOCALAPPDATA%\minixia\` |
 | PATH 安装 | `/usr/local/bin` 或 `~/.local/bin` | `%LOCALAPPDATA%\minixia\` |
 | TTS 依赖 | 无需额外依赖 | 无需额外依赖 |
-| MQTT 客户端 | 内嵌 | 内嵌 |
+| WebSocket | gorilla/websocket | gorilla/websocket |
 | 管道输入 | 完整支持 | PowerShell 部分支持 |
 
 ---
@@ -616,7 +582,7 @@ done
 | **语言** | Go（编译为静态二进制，无运行时依赖，跨平台交叉编译成熟） |
 | **CLI 框架** | [cobra](https://github.com/spf13/cobra) + [viper](https://github.com/spf13/viper) |
 | **HTTP 客户端** | Go 标准库 `net/http` |
-| **MQTT 客户端** | [paho.mqtt.golang](https://github.com/eclipse/paho.mqtt.golang)（内嵌，无需用户安装） |
+| **WebSocket** | [gorilla/websocket](https://github.com/gorilla/websocket) |
 | **TTS** | 不在 CLI 内合成。`send --type voice` / `voice_call`：**文本内容** URL 编码后提交 **server**；**音频文件**读取后 base64 编码再提交 **server**。Azure 合成由 **mini-claw-server** 在文本路径上调用 |
 | **配置格式** | TOML（viper 原生支持） |
 | **终端 UI** | [lipgloss](https://github.com/charmbracelet/lipgloss) + [tablewriter](https://github.com/olekukonez/tablewriter) |
@@ -643,7 +609,7 @@ done
 | **M1：基础可用** | `install.sh` + `init` + `send`（text）+ `status` + `config` | 可一键安装，可发文本消息 |
 | **M2：指令闭环** | `query` + `ack` + `--watch` + `--exec` | 可拉取和处理指令 |
 | **M3：富媒体** | `send`（image / voice / voice_call）；纯文本语音由服务端 Azure TTS | 支持图片和语音发送 |
-| **M4：高级连接** | `webhook` + `mqtt` | 支持全部三种指令接收方式 |
+| **M4：实时连接** | `ws` | WebSocket 与轮询并行支持指令接收 |
 | **M5：生态完善** | `upgrade` + `uninstall` + brew/apt/scoop + shell 补全 | 完善安装体验与生态 |
 
 ---
